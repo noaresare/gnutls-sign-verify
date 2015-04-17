@@ -7,47 +7,54 @@
 #include <string.h>
 #include <stdlib.h>
 
-int get_key(char *path, gnutls_privkey_t *key) {
+gnutls_datum_t read_to_buffer(char *path) {
   struct stat sb;
   unsigned char *buf;
-  FILE *key_file;
+  gnutls_datum_t out;
+  FILE *fp;
   size_t read_count;
-  gnutls_datum_t datum;
-  gnutls_x509_privkey_t x509_key;
-  int i;
-  unsigned int bits;
+
+  memset(&out, 0, sizeof(out));
 
   if (stat(path, &sb)) {
     perror("failed to stat()");
-    return 1;
   }
   printf("Key size is %ld\n", sb.st_size);
 
   buf = malloc(sb.st_size);
   if (buf == NULL) {
     perror("failed to malloc()");
-    return 1;
+    return out;
   }
 
-  key_file = fopen(path, "r"); 
-  if (key_file == NULL) {
+  fp = fopen(path, "r");
+  if (fp == NULL) {
     perror("failed to fopen()");
-    return 1;
+    return out;
   }
-    
-  read_count = fread(buf, sizeof(char), sb.st_size, key_file);
+
+  read_count = fread(buf, sizeof(char), sb.st_size, fp);
   if (read_count < sb.st_size) {
     fprintf(stderr, "Read %ld bytes\n", read_count);
     perror("short fread()");
-    return 1;
+    return out;
   }
-  if (fclose(key_file)) {
+  if (fclose(fp)) {
     perror("failed to fclose()");
-    return 1;
+    return out;
   }
+  out.size = sb.st_size;
+  out.data = buf;
+  return out;
+}
 
-  datum.data = buf;
-  datum.size = sb.st_size;
+static int get_key(char *path, gnutls_privkey_t *key) {
+  gnutls_datum_t datum;
+  gnutls_x509_privkey_t x509_key;
+  int i;
+  unsigned int bits;
+
+  datum = read_to_buffer(path);
 
   if ((i = gnutls_x509_privkey_init(&x509_key))) {
     fprintf(stderr, "Failed to call gnutls_x509_privkey_init(): %s\n", gnutls_strerror(i));
@@ -59,7 +66,7 @@ int get_key(char *path, gnutls_privkey_t *key) {
     return 1;
   }
 
-  free(buf);
+  free(datum.data);
     
   i = gnutls_x509_privkey_get_pk_algorithm2(x509_key, &bits); 
   if (i < 0) {
