@@ -20,7 +20,6 @@ gnutls_datum_t read_to_buffer(char *path, int size) {
     if (stat(path, &sb)) {
       perror("failed to stat()");
     }
-    printf("Detected file size is %ld\n", sb.st_size);
     size = sb.st_size;
   } 
 
@@ -50,3 +49,27 @@ gnutls_datum_t read_to_buffer(char *path, int size) {
   out.data = buf;
   return out;
 }
+
+int write_data_to_file(char *path, gnutls_datum_t data) {
+  size_t bytes_written;
+  FILE *f;
+
+  f = fopen(path, "w");
+  if (f == NULL) {
+    perror("failed to fopen()");
+    return 1;
+  }
+
+  bytes_written = fwrite(data.data, 1, data.size, f);
+  if (bytes_written < data.size) {
+    fprintf(stderr, "Wrote %ld bytes\n", bytes_written);
+    perror("failed to fwrite()");
+    return 1;
+  }
+
+  fclose(f);
+
+  return 0;
+}
+
+

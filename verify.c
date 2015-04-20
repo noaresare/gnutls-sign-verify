@@ -54,9 +54,5 @@ int main(int argc, char **argv) {
 
 
 
-  printf("at the end of program\n");
-
-  
-
   return 0;
 }

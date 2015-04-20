@@ -9,37 +9,7 @@
 #define TPM_SRK_PASSWORD "a"
 
 gnutls_datum_t read_to_buffer(char *path, int size);
-
-static int get_key(char *url, gnutls_privkey_t *key) {
-  int i;
-  if ((i = gnutls_privkey_import_tpm_url(*key, url, TPM_SRK_PASSWORD, NULL, 0))) {
-    fprintf(stderr, "Failed to call gnutls_privkey_import_url(): %s\n", gnutls_strerror(i));
-    return 1;
-  }
-  return 0;
-}
-
-static int write_data_to_file(char *path, gnutls_datum_t data) {
-  size_t bytes_written;
-  FILE *f;
-
-  f = fopen(path, "w");
-  if (f == NULL) {
-    perror("failed to fopen()");
-    return 1;
-  }
-
-  bytes_written = fwrite(data.data, 1, data.size, f);
-  if (bytes_written < data.size) {
-    fprintf(stderr, "Wrote %ld bytes\n", bytes_written);
-    perror("failed to fwrite()");
-    return 1;
-  }
-
-  fclose(f);
-
-  return 0;
-}
+int write_data_to_file(char *path, gnutls_datum_t data); 
 
 int main(int argc, char **argv) {
 
@@ -54,10 +24,11 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  if (get_key(TPM_KEY_URL, &key)) {
-    fprintf(stderr, "get_key() failed, exiting\n");
+  if ((i = gnutls_privkey_import_tpm_url(key, TPM_KEY_URL, TPM_SRK_PASSWORD, NULL, 0))) {
+    fprintf(stderr, "Failed to call gnutls_privkey_import_tpm_url(): %s\n", gnutls_strerror(i));
     return 2;
   }
+
     
   challenge = read_to_buffer("/dev/urandom", 32);
   if (challenge.size == 0) {
@@ -76,11 +47,6 @@ int main(int argc, char **argv) {
   write_data_to_file("signature.bin", signature);
   printf("Wrote signature.bin to file\n");
 
-
-
-  printf("at the end of program\n");
-
-  
 
   return 0;
 }
